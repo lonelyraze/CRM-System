@@ -19,24 +19,35 @@ Base.metadata.create_all(bind=engine)
 from database import SessionLocal
 from models import User
 
-def create_admin():
-    db = SessionLocal()
-    if not db.query(User).filter(User.username == os.getenv("ADMIN_LOGIN")).first():
-        admin = User(
-            username=os.getenv("ADMIN_LOGIN"),
-            password=os.getenv("ADMIN_PASSWORD"),
-            is_admin=True
-        )
-        db.add(admin)
-        db.commit()
-    db.close()
-
-create_admin()
-
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="secret")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+from database import SessionLocal
+from models import User
+from auth import hash_password
+
+
+def ensure_admin():
+    db = SessionLocal()
+
+    admin = db.query(User).filter(User.username == "raze").first()
+    if not admin:
+        admin = User(
+            username="raze",
+            password=hash_password("raze"),
+            is_admin=True
+        )
+        db.add(admin)
+        db.commit()
+        print("✅ Admin raze created (hashed)")
+
+    db.close()
+
+ensure_admin()
+
+
 
 clients = []
 user_clients = []
@@ -54,14 +65,13 @@ def login_page(request: Request):
 
 @app.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(User).filter_by(username=username, password=password).first()
+    from auth import verify_password
+    user = db.query(User).filter(User.username == username).first()
     if not user:
         return RedirectResponse("/", status_code=302)
-    request.session["user"] = user.username
-    request.session["role"] = user.role
-    request.session["is_admin"] = user.is_admin
-    request.session["user_id"] = user.id
-    return RedirectResponse("/tickets", status_code=302)
+
+    if not verify_password(password, user.password):
+        return RedirectResponse("/", status_code=302)
 
 @app.get("/tickets")
 def tickets(
@@ -403,7 +413,7 @@ async def create_user(request: Request, db: Session = Depends(get_db)):
     
     user = User(
         username=username,
-        password=password,
+        password=hash_password(password),
         role=role,
         is_admin=is_admin
     )
@@ -424,7 +434,8 @@ async def update_user(user_id: int, request: Request, db: Session = Depends(get_
     if 'password' in form_data:
         password = form_data.get('password')
         if password:  # Обновляем пароль только если он не пустой
-            user.password = password
+            from auth import hash_password
+            user.password = hash_password(password)
     if 'role' in form_data:
         user.role = form_data.get('role')
     if 'is_admin' in form_data:
