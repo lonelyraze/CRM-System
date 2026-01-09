@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель | Тикеты</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script>
+        moment.locale('ru');
+    </script>
+</head>
+<body class="dark-admin">
+    <div class="admin-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="admin-avatar">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <h2>Админ Панель</h2>
+                <p>Тикет-система</p>
+            </div>
+            
+            <div class="sidebar-menu">
+                <a href="#" class="menu-item active" data-tab="tickets">
+                    <i class="fas fa-ticket-alt"></i>
+                    <span>Все тикеты</span>
+                    <span class="badge" id="ticket-count">0</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="users">
+                    <i class="fas fa-users"></i>
+                    <span>Пользователи</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="sms-templates">
+                    <i class="fas fa-sms"></i>
+                    <span>SMS Шаблоны</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="comments">
+                    <i class="fas fa-comments"></i>
+                    <span>Комментарии</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Настройки</span>
+                </a>
+            </div>
+            
+            <div class="sidebar-footer">
+                <a href="/logout" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Выйти</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="tickets-tab" class="tab-content">
+                <div class="admin-header">
+                    <h1><i class="fas fa-tachometer-alt"></i> Управление тикетами</h1>
+                    <div class="header-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon open">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="open-count">0</h3>
+                                <p>Открыто</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon processing">
+                                <i class="fas fa-cogs"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="processing-count">0</h3>
+                                <p>В работе</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon done">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="done-count">0</h3>
+                                <p>Завершено</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tickets-container">
+                    <div class="tickets-header">
+                        <h2><i class="fas fa-list"></i> Список тикетов</h2>
+                        <div class="filters">
+                            <select id="filter-status" class="filter-select">
+                                <option value="all">Все статусы</option>
+                                <option value="opened">Открыт</option>
+                                <option value="processing">В работе</option>
+                                <option value="done">Завершен</option>
+                            </select>
+                            <select id="filter-topic" class="filter-select">
+                                <option value="all">Все темы</option>
+                                <option value="telephony">Телефония</option>
+                                <option value="sms">SMS</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="tickets-list" id="tickets-list">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Загрузка тикетов...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="users-tab" class="tab-content" style="display: none;">
+                <div class="admin-header">
+                    <h1><i class="fas fa-users"></i> Управление пользователями</h1>
+                    <button id="add-user-btn" class="btn-primary">
+                        <i class="fas fa-user-plus"></i> Добавить пользователя
+                    </button>
+                </div>
+
+                <div class="tickets-container">
+                    <div class="users-list" id="users-list">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Загрузка пользователей...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="sms-templates-tab" class="tab-content" style="display: none;">
+                <div class="admin-header">
+                    <h1><i class="fas fa-sms"></i> Управление SMS шаблонами</h1>
+                    <button id="add-sms-template-btn" class="btn-primary">
+                        <i class="fas fa-plus"></i> Добавить шаблон
+                    </button>
+                </div>
+
+                <div class="tickets-container">
+                    <div class="sms-templates-grid" id="sms-templates-list">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Загрузка SMS шаблонов...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="comments-tab" class="tab-content" style="display: none;">
+                <div class="admin-header">
+                    <h1><i class="fas fa-comments"></i> Все комментарии</h1>
+                </div>
+
+                <div class="tickets-container">
+                    <div id="comments-list-tab">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Загрузка комментариев...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settings-tab" class="tab-content" style="display: none;">
+                <div class="admin-header">
+                    <h1><i class="fas fa-cog"></i> Настройки системы</h1>
+                </div>
+
+                <div class="tickets-container">
+                    <div id="settings-content">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Загрузка настроек...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="comment-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Комментарии к тикету #<span id="modal-ticket-id"></span></h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="comments-list" id="comments-list">
+                </div>
+                <form id="add-comment-form" class="add-comment-form">
+                    <input type="hidden" id="comment-ticket-id">
+                    <textarea id="comment-text" placeholder="Введите ваш комментарий..." required></textarea>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-paper-plane"></i> Отправить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-user-modal" class="modal"></div>
+    <div id="add-sms-template-modal" class="modal"></div>
+    <script src="/static/admin.js"></script>
+</body>
+</html>

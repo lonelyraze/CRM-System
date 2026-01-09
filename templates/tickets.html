@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if is_admin %}Админ-панель{% else %}Мои тикеты{% endif %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% if is_admin %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script>
+        moment.locale('ru');
+    </script>
+    {% endif %}
+</head>
+<body class="{% if is_admin %}dark-admin{% else %}user-tickets{% endif %}">
+    
+    {% if is_admin %}
+    <div class="admin-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="admin-avatar">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <h2>Админ Панель</h2>
+                <p>Тикет-система</p>
+            </div>
+            
+            <div class="sidebar-menu">
+                <a href="#" class="menu-item active" data-tab="tickets">
+                    <i class="fas fa-ticket-alt"></i>
+                    <span>Все тикеты</span>
+                    <span class="badge" id="ticket-count">0</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="users">
+                    <i class="fas fa-users"></i>
+                    <span>Пользователи</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="sms-templates">
+                    <i class="fas fa-sms"></i>
+                    <span>SMS Шаблоны</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="comments">
+                    <i class="fas fa-comments"></i>
+                    <span>Комментарии</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Настройки</span>
+                </a>
+            </div>
+            
+            <div class="sidebar-footer">
+                <a href="/logout" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Выйти</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="tickets-tab" class="tab-content">
+                <div class="admin-header">
+                    <h1><i class="fas fa-tachometer-alt"></i> Управление тикетами</h1>
+                    <div class="header-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon open">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="open-count">0</h3>
+                                <p>Открыто</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon processing">
+                                <i class="fas fa-cogs"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="processing-count">0</h3>
+                                <p>В работе</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon done">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="done-count">0</h3>
+                                <p>Завершено</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tickets-container">
+                    <div class="tickets-header">
+                        <h2><i class="fas fa-list"></i> Список тикетов</h2>
+                        <div class="filters">
+                            <select id="filter-status" class="filter-select">
+                                <option value="all">Все статусы</option>
+                                <option value="opened">Открыт</option>
+                                <option value="processing">В работе</option>
+                                <option value="done">Завершен</option>
+                            </select>
+                            <select id="filter-topic" class="filter-select">
+                                <option value="all">Все темы</option>
+                                <option value="telephony">Телефония</option>
+                                <option value="sms">SMS</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="tickets-list" id="tickets-list">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Загрузка тикетов...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="users-tab" class="tab-content" style="display: none;">
+                <div class="admin-header">
+                    <h1><i class="fas fa-users"></i> Управление пользователями</h1>
+                    <button id="add-user-btn" class="btn-primary">
+                        <i class="fas fa-user-plus"></i> Добавить пользователя
+                    </button>
+                </div>
+
+                <div class="tickets-container">
+                    <div class="users-list" id="users-list">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Загрузка пользователей...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="sms-templates-tab" class="tab-content" style="display: none;">
+                <div class="admin-header">
+                    <h1><i class="fas fa-sms"></i> Управление SMS шаблонами</h1>
+                    <button id="add-sms-template-btn" class="btn-primary">
+                        <i class="fas fa-plus"></i> Добавить шаблон
+                    </button>
+                </div>
+
+                <div class="tickets-container">
+                    <div class="sms-templates-grid" id="sms-templates-list">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Загрузка SMS шаблонов...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="comments-tab" class="tab-content" style="display: none;">
+                <div class="admin-header">
+                    <h1><i class="fas fa-comments"></i> Все комментарии</h1>
+                </div>
+
+                <div class="tickets-container">
+                    <div id="comments-list-tab">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Загрузка комментариев...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settings-tab" class="tab-content" style="display: none;">
+                <div class="admin-header">
+                    <h1><i class="fas fa-cog"></i> Настройки системы</h1>
+                </div>
+
+                <div class="tickets-container">
+                    <div id="settings-content">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Загрузка настроек...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="comment-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Комментарии к тикету #<span id="modal-ticket-id"></span></h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="comments-list" id="comments-list">
+                </div>
+                <form id="add-comment-form" class="add-comment-form">
+                    <input type="hidden" id="comment-ticket-id">
+                    <textarea id="comment-text" placeholder="Введите ваш комментарий..." required></textarea>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-paper-plane"></i> Отправить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-user-modal" class="modal"></div>
+    <div id="add-sms-template-modal" class="modal"></div>
+
+    <script src="/static/admin.js"></script>
+
+    {% else %}
+    <div class="user-container">
+        <header class="user-header">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <h1>Добро пожаловать, {{ request.session.user }}</h1>
+                    <p>Ваша тикет-система</p>
+                </div>
+            </div>
+            <a href="/logout" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Выйти
+            </a>
+        </header>
+
+        <div class="user-content">
+            <div class="create-ticket-card">
+                <h2><i class="fas fa-plus-circle"></i> Создать новый тикет</h2>
+                <form method="post" action="/tickets/create" class="ticket-form">
+                    <div class="form-group">
+                        <label><i class="fas fa-tag"></i> Тема</label>
+                        <select name="topic" id="topic-select" required onchange="toggleFields()">
+                            <option value="">Выберите тему</option>
+                            <option value="telephony">Телефония</option>
+                            <option value="sms">SMS</option>
+                        </select>
+                    </div>
+
+                    <div id="telephony-fields" class="topic-fields" style="display: none;">
+                        <div class="form-group">
+                            <label><i class="fas fa-phone"></i> SIP номер</label>
+                            <input type="text" name="sip" placeholder="Введите SIP номер" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-exclamation-triangle"></i> Описание ошибки</label>
+                            <textarea name="error" placeholder="Опишите проблему..." rows="3" required></textarea>
+                        </div>
+                    </div>
+
+                    <div id="sms-fields" class="topic-fields" style="display: none;">
+                        <div class="form-group">
+                            <label><i class="fas fa-mobile-alt"></i> Номер телефона</label>
+                            <input type="text" name="phone" placeholder="+7 (XXX) XXX-XX-XX" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-sms"></i> Текст SMS</label>
+                            <div class="sms-template-wrapper">
+                                <select id="smsTemplates" class="template-select" onchange="applyTemplate(this)">
+                                    <option value="">Выберите шаблон (опционально)</option>
+                                </select>
+                                <textarea id="sms_text" name="text" placeholder="Введите текст сообщения..." rows="4" required></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-create">
+                        <i class="fas fa-paper-plane"></i> Отправить тикет
+                    </button>
+                </form>
+            </div>
+
+            <div class="my-tickets">
+                <h2><i class="fas fa-history"></i> Мои тикеты</h2>
+                <div class="tickets-grid">
+                    {% if tickets_with_comments %}
+                        {% for item in tickets_with_comments %}
+                        {% set ticket = item.ticket %}
+                        {% set comments = item.comments %}
+                        <div class="user-ticket-card {{ ticket.status }}" data-id="{{ ticket.id }}">
+                            <div class="ticket-status-badge">
+                                <span class="status-dot {{ ticket.status }}"></span>
+                                {% if ticket.status == 'opened' %}Открыт
+                                {% elif ticket.status == 'processing' %}В работе
+                                {% else %}Завершен{% endif %}
+                            </div>
+                            
+                            <div class="ticket-content">
+                                <h3>
+                                    <i class="fas {% if ticket.topic == 'telephony' %}fa-phone{% else %}fa-sms{% endif %}"></i>
+                                    {{ "Телефония" if ticket.topic == 'telephony' else 'SMS' }}
+                                </h3>
+                                
+                                {% if ticket.error_text %}
+                                <p class="ticket-description">{{ ticket.error_text }}</p>
+                                {% endif %}
+                                
+                                {% if ticket.sms_text %}
+                                <p class="ticket-description">{{ ticket.sms_text }}</p>
+                                {% endif %}
+                                
+                                {% if ticket.sip_number %}
+                                <div class="ticket-detail">
+                                    <span>SIP:</span> {{ ticket.sip_number }}
+                                </div>
+                                {% endif %}
+                                
+                                {% if ticket.phone_number %}
+                                <div class="ticket-detail">
+                                    <span>Телефон:</span> {{ ticket.phone_number }}
+                                </div>
+                                {% endif %}
+                                
+                                <div class="ticket-meta">
+                                    <span><i class="far fa-clock"></i> {{ ticket.created_at if ticket.created_at else 'Сегодня' }}</span>
+                                    <span><i class="fas fa-hashtag"></i> #{{ ticket.id }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="ticket-comments">
+                                {% if comments %}
+                                <div class="comments-preview">
+                                    <i class="fas fa-comment"></i>
+                                    <span>{{ comments|length }} комментари{{ 'й' if comments|length == 1 else 'я' if comments|length in [2,3,4] else 'ев' }}</span>
+                                </div>
+                                {% else %}
+                                <div class="no-comments">
+                                    <i class="fas fa-comment"></i> Нет комментариев
+                                </div>
+                                {% endif %}
+                                
+                                <div class="comments-dropdown" id="comments-{{ ticket.id }}" style="display: none;">
+                                    <div class="comments-list">
+                                        {% for comment in comments %}
+                                        <div class="comment-item">
+                                            <div class="comment-header">
+                                                <span class="comment-author {% if 'admin' in comment.author %}admin{% endif %}">
+                                                    <i class="fas fa-user"></i> {{ comment.author }}
+                                                </span>
+                                                <span class="comment-time">{{ comment.created_at if comment.created_at else '' }}</span>
+                                            </div>
+                                            <div class="comment-text">{{ comment.text }}</div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    <form class="add-comment-form">
+                                        <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
+                                        <textarea name="text" placeholder="Добавить комментарий..." required></textarea>
+                                        <button type="submit" class="btn-sm">
+                                            <i class="fas fa-paper-plane"></i> Отправить
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="no-tickets">
+                        <i class="fas fa-inbox"></i>
+                        <h3>У вас пока нет тикетов</h3>
+                        <p>Создайте первый тикет, чтобы получить помощь</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleFields() {
+            const topic = document.getElementById('topic-select').value;
+            const telephonyFields = document.getElementById('telephony-fields');
+            const smsFields = document.getElementById('sms-fields');
+            
+            telephonyFields.style.display = 'none';
+            smsFields.style.display = 'none';
+            
+            telephonyFields.querySelectorAll('[required]').forEach(field => field.required = false);
+            smsFields.querySelectorAll('[required]').forEach(field => field.required = false);
+            
+            if (topic === 'telephony') {
+                telephonyFields.style.display = 'block';
+                telephonyFields.querySelectorAll('input, textarea').forEach(field => field.required = true);
+            } else if (topic === 'sms') {
+                smsFields.style.display = 'block';
+                smsFields.querySelectorAll('input, textarea').forEach(field => {
+                    if (field.id !== 'smsTemplates') field.required = true;
+                });
+                loadSmsTemplates();
+            }
+        }
+        
+        function loadSmsTemplates() {
+            fetch('/sms/templates')
+                .then(r => r.json())
+                .then(data => {
+                    const select = document.getElementById('smsTemplates');
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+                    
+                    data.forEach(t => {
+                        const option = document.createElement('option');
+                        option.value = t.text;
+                        option.textContent = t.title;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Ошибка загрузки шаблонов:', error));
+        }
+        
+        function applyTemplate(select) {
+            const textarea = document.getElementById('sms_text');
+            if (select.value) {
+                textarea.value = select.value;
+            }
+        }
+        
+        function loadComments(ticketId) {
+            fetch(`/tickets/${ticketId}/comments`)
+                .then(r => r.json())
+                .then(comments => {
+                    const dropdown = document.getElementById('comments-' + ticketId);
+                    const commentsList = dropdown.querySelector('.comments-list');
+                    
+                    if (commentsList) {
+                        commentsList.innerHTML = '';
+                        
+                        if (comments.length === 0) {
+                            commentsList.innerHTML = '<div class="no-comments">Пока нет комментариев</div>';
+                        } else {
+                            comments.forEach(c => {
+                                const commentItem = document.createElement('div');
+                                commentItem.className = 'comment-item';
+                                commentItem.innerHTML = `
+                                    <div class="comment-header">
+                                        <span class="comment-author ${c.author.includes('admin') ? 'admin' : ''}">
+                                            <i class="fas fa-user"></i> ${c.author}
+                                        </span>
+                                        <span class="comment-time">${c.created_at}</span>
+                                    </div>
+                                    <div class="comment-text">${c.text}</div>
+                                `;
+                                commentsList.appendChild(commentItem);
+                            });
+                        }
+                    }
+                    
+                    const previewElement = document.querySelector(`[data-id="${ticketId}"] .comments-preview span`);
+                    const noCommentsElement = document.querySelector(`[data-id="${ticketId}"] .no-comments`);
+                    
+                    if (comments.length > 0) {
+                        const word = getCommentWord(comments.length);
+                        if (previewElement) {
+                            previewElement.textContent = `${comments.length} ${word}`;
+                        }
+                        if (noCommentsElement) {
+                            noCommentsElement.style.display = 'none';
+                        }
+                        if (previewElement && previewElement.parentElement) {
+                            previewElement.parentElement.style.display = 'flex';
+                        }
+                    }
+                })
+                .catch(error => console.error('Ошибка загрузки комментариев:', error));
+        }
+        
+        function getCommentWord(count) {
+            if (count === 1) return 'комментарий';
+            if (count >= 2 && count <= 4) return 'комментария';
+            return 'комментариев';
+        }
+        
+        function toggleComments(event, ticketId) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('comments-' + ticketId);
+            const isVisible = dropdown.style.display === 'block';
+            
+            document.querySelectorAll('.comments-dropdown').forEach(d => {
+                if (d.id !== 'comments-' + ticketId) {
+                    d.style.display = 'none';
+                }
+            });
+
+            dropdown.style.display = isVisible ? 'none' : 'block';
+            
+            if (!isVisible) {
+                loadComments(ticketId);
+                setTimeout(() => {
+                    const textarea = dropdown.querySelector('textarea');
+                    if (textarea) textarea.focus();
+                }, 100);
+            }
+        }
+        
+
+        async function addComment(event, ticketId) {
+            event.preventDefault();
+            const form = event.target;
+            const textarea = form.querySelector('textarea');
+            const text = textarea.value.trim();
+            
+            if (!text) {
+                showNotification('Введите текст комментария', 'error');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('ticket_id', ticketId);
+                formData.append('text', text);
+                
+                const response = await fetch('/tickets/comment', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    textarea.value = '';
+                    showNotification('Комментарий добавлен', 'success');
+                    loadComments(ticketId);
+                } else {
+                    showNotification('Ошибка добавления комментария', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showNotification('Ошибка добавления комментария', 'error');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            document.querySelectorAll('.user-notification').forEach(n => n.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = `user-notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'info' ? 'info-circle' : type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+
+            document.querySelectorAll('.comments-preview, .no-comments').forEach(el => {
+                el.addEventListener('click', function(e) {
+                    const ticketCard = this.closest('.user-ticket-card');
+                    const ticketId = ticketCard.dataset.id;
+                    toggleComments(e, ticketId);
+                });
+            });
+            
+            document.querySelectorAll('.add-comment-form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    const ticketCard = this.closest('.user-ticket-card');
+                    const ticketId = ticketCard.dataset.id;
+                    addComment(e, ticketId);
+                });
+            });
+            
+            document.addEventListener('click', function() {
+                document.querySelectorAll('.comments-dropdown').forEach(d => {
+                    d.style.display = 'none';
+                });
+            });
+            const eventSource = new EventSource('/events');
+            
+            eventSource.onmessage = function(event) {
+                if (event.data === 'update') {
+                    showNotification('Есть новые обновления!', 'info');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                }
+            };
+            
+            eventSource.onerror = function() {
+                console.log('SSE connection error, reconnecting...');
+                eventSource.close();
+                setTimeout(() => {
+                    new EventSource('/events');
+                }, 3000);
+            };
+        });
+    </script>
+    {% endif %}
+</body>
+</html>
