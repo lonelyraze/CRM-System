@@ -33,6 +33,7 @@ def ensure_admin():
     db = SessionLocal()
 
     admin = db.query(User).filter(User.username == "raze").first()
+
     if not admin:
         admin = User(
             username="raze",
@@ -42,6 +43,13 @@ def ensure_admin():
         db.add(admin)
         db.commit()
         print("✅ Admin raze created (hashed)")
+
+    else:
+        # 🔥 ВОТ ЭТО ГЛАВНОЕ
+        if not admin.password.startswith("$2"):
+            admin.password = hash_password("raze")
+            db.commit()
+            print("🔁 Admin password re-hashed")
 
     db.close()
 
