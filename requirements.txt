@@ -6,3 +6,4 @@ jinja2
 flask
 psycopg2-binary
 passlib
+bcrypt
