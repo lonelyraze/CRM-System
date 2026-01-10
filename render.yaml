@@ -5,5 +5,6 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
     envVars:
-      - key: DATABASE_URL
-        value: sqlite:///./db.sqlite3
+      # DATABASE_URL автоматически создается Render при добавлении PostgreSQL
+      - key: SECRET_KEY
+        sync: false  # Не синхронизировать значение из yaml файла

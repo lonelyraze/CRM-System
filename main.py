@@ -19,13 +19,26 @@ Base.metadata.create_all(bind=engine)
 from database import SessionLocal
 from models import User
 
+# СОЗДАЕМ APP ТОЛЬКО ОДИН РАЗ!
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="secret")
+
+# Получаем секретный ключ
+SECRET_KEY = os.environ.get("SECRET_KEY", "ticket-system-small-team-2024-secret")
+
+# Добавляем SessionMiddleware ТОЛЬКО ОДИН РАЗ!
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    session_cookie="ticket_session",
+    max_age=3600 * 24 * 7,  # 7 дней
+    same_site="lax",
+    https_only=False,
+    secure=False
+)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-from database import SessionLocal
-from models import User
 from auth import hash_password
 
 
@@ -45,7 +58,6 @@ def ensure_admin():
         print("✅ Admin raze created (hashed)")
 
     else:
-        # 🔥 ВОТ ЭТО ГЛАВНОЕ
         if not admin.password.startswith("$2"):
             admin.password = hash_password("raze")
             db.commit()
@@ -76,10 +88,23 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     from auth import verify_password
     user = db.query(User).filter(User.username == username).first()
     if not user:
+        # Добавляем небольшую задержку для безопасности
+        time.sleep(0.5)
         return RedirectResponse("/", status_code=302)
 
     if not verify_password(password, user.password):
+        time.sleep(0.5)
         return RedirectResponse("/", status_code=302)
+
+    # Устанавливаем сессию
+    request.session["user"] = user.username
+    request.session["is_admin"] = user.is_admin
+    
+    # Редирект в зависимости от роли
+    if user.is_admin:
+        return RedirectResponse("/admin", status_code=302)
+    else:
+        return RedirectResponse("/tickets", status_code=302)
 
 @app.get("/tickets")
 def tickets(
@@ -87,15 +112,22 @@ def tickets(
     partial: Optional[bool] = False, 
     db: Session = Depends(get_db)
 ):
+    # Проверяем авторизацию
     user = request.session.get("user")
     if not user:
         return RedirectResponse("/", 302)
 
+    # Получаем пользователя из БД для проверки
     db_user = db.query(User).filter_by(username=user).first()
     if not db_user:
+        # Если пользователя нет в БД, очищаем сессию
         request.session.clear()
         return RedirectResponse("/", status_code=302)
-
+    
+    # Устанавливаем is_admin в сессию (если еще не установлено)
+    if "is_admin" not in request.session:
+        request.session["is_admin"] = db_user.is_admin
+    
     # Получаем тикеты в зависимости от прав - НОВЫЕ ПЕРВЫМИ
     if db_user.is_admin:
         tickets_data = db.query(Ticket).order_by(Ticket.id.desc()).all()
@@ -163,9 +195,22 @@ async def create_ticket(request: Request, topic: str = Form(...), sip: str = For
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin(request: Request, db: Session = Depends(get_db)):
-    if not request.session.get("is_admin"):
+    # Проверяем авторизацию
+    user = request.session.get("user")
+    if not user:
         return RedirectResponse("/", status_code=302)
+    
+    # Проверяем, что пользователь админ
+    db_user = db.query(User).filter_by(username=user).first()
+    if not db_user or not db_user.is_admin:
+        return RedirectResponse("/tickets", status_code=302)
+    
     return templates.TemplateResponse("admin.html", {"request": request})
+
+# ⚠️ УДАЛИТЬ ДУБЛИРУЮЩИЙСЯ ЭНДПОИНТ!
+# У вас был два одинаковых:
+# @app.get("/admin/api/tickets")
+# Оставляем только ОДИН:
 
 @app.get("/admin/api/tickets")
 def get_tickets_api(db: Session = Depends(get_db)):
@@ -223,7 +268,6 @@ async def events(request: Request):
         clients.append(q)  # Для админов
         
         # Для пользователей тоже добавляем в общую очередь
-        # или создаем отдельную для пользователя
         user_q = asyncio.Queue()
         user_clients.append(user_q)
         
@@ -380,8 +424,6 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db)):
             await q.put("update")
         
         # Отправляем уведомление пользователю (владельцу тикета)
-        # Находим SSE очередь пользователя
-        # В реальном приложении нужно хранить маппинг пользователь -> очередь
         for q in user_clients:
             await q.put("update")
         
@@ -455,7 +497,6 @@ async def update_user(user_id: int, request: Request, db: Session = Depends(get_
 
 @app.delete("/admin/user/{user_id}")
 def delete_user(user_id: int, db: Session = Depends(get_db)):
-    # Не позволяем удалить самого себя
     user = db.query(User).get(user_id)
     if user:
         db.delete(user)
@@ -553,4 +594,10 @@ def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/", status_code=302)
 
-
+# Опционально: добавьте middleware для базовой безопасности
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    return response

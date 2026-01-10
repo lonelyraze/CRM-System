@@ -4,7 +4,7 @@ sqlalchemy
 psycopg2-binary
 python-multipart
 jinja2==3.1.2
-
 passlib==1.7.4
 bcrypt==3.2.2
 itsdangerous==2.1.2
+starlette  # для SessionMiddleware
