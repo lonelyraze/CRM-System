@@ -26,14 +26,15 @@ app = FastAPI()
 SECRET_KEY = os.environ.get("SECRET_KEY", "ticket-system-small-team-2024-secret")
 
 # Добавляем SessionMiddleware ТОЛЬКО ОДИН РАЗ!
+# ПРАВИЛЬНЫЕ параметры для SessionMiddleware:
 app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
-    session_cookie="ticket_session",
+    # session_cookie автоматически будет "session"
     max_age=3600 * 24 * 7,  # 7 дней
     same_site="lax",
-    https_only=False,
-    secure=False
+    # https_only управляется через session_cookie_secure
+    # secure параметр не поддерживается, удаляем его
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -206,11 +207,6 @@ def admin(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse("/tickets", status_code=302)
     
     return templates.TemplateResponse("admin.html", {"request": request})
-
-# ⚠️ УДАЛИТЬ ДУБЛИРУЮЩИЙСЯ ЭНДПОИНТ!
-# У вас был два одинаковых:
-# @app.get("/admin/api/tickets")
-# Оставляем только ОДИН:
 
 @app.get("/admin/api/tickets")
 def get_tickets_api(db: Session = Depends(get_db)):
