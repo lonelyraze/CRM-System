@@ -13,7 +13,7 @@ from models import User, Ticket, Base, SmsTemplate, TicketComment
 from typing import Optional
 from database import engine, Base
 import models
-
+from auth import hash_password
 Base.metadata.create_all(bind=engine)
 
 from database import SessionLocal
@@ -460,7 +460,8 @@ async def create_user(request: Request, db: Session = Depends(get_db)):
     
     user = User(
         username=username,
-        password=hash_password(password),
+        password=hash_password(password),  # Шифруем
+        plain_password=password,  # Сохраняем открытый пароль
         role=role,
         is_admin=is_admin
     )
@@ -481,8 +482,8 @@ async def update_user(user_id: int, request: Request, db: Session = Depends(get_
     if 'password' in form_data:
         password = form_data.get('password')
         if password:  # Обновляем пароль только если он не пустой
-            from auth import hash_password
-            user.password = hash_password(password)
+            user.password = hash_password(password)  # Шифруем
+            user.plain_password = password  # Сохраняем открытый пароль
     if 'role' in form_data:
         user.role = form_data.get('role')
     if 'is_admin' in form_data:

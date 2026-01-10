@@ -417,54 +417,61 @@ class AdminPanel {
         container.innerHTML = usersHtml;
     }
 
-    createUserHtml(user) {
-        return `
-            <div class="user-card" data-id="${user.id}">
-                <div class="user-header">
-                    <div class="user-info">
-                        <div class="user-avatar ${user.is_admin ? 'admin' : 'user'}">
-                            <i class="fas fa-${user.is_admin ? 'user-shield' : 'user'}"></i>
-                        </div>
-                        <div class="user-details">
-                            <h3>${user.username}</h3>
-                            <div class="user-meta">
-                                <span class="user-role ${user.is_admin ? 'admin' : ''}">
-                                    <i class="fas fa-user-tag"></i>
-                                    ${user.role} ${user.is_admin ? '(Админ)' : ''}
-                                </span>
-                                <span class="user-id">
-                                    <i class="fas fa-hashtag"></i> ID: ${user.id}
-                                </span>
+// В функции createUserHtml в admin.js
+        createUserHtml(user) {
+            return `
+                <div class="user-card" data-id="${user.id}">
+                    <div class="user-header">
+                        <div class="user-info">
+                            <div class="user-avatar ${user.is_admin ? 'admin' : 'user'}">
+                                <i class="fas fa-${user.is_admin ? 'user-shield' : 'user'}"></i>
+                            </div>
+                            <div class="user-details">
+                                <h3>${user.username}</h3>
+                                <div class="user-meta">
+                                    <span class="user-role ${user.is_admin ? 'admin' : ''}">
+                                        <i class="fas fa-user-tag"></i>
+                                        ${user.role} ${user.is_admin ? '(Админ)' : ''}
+                                    </span>
+                                    <span class="user-id">
+                                        <i class="fas fa-hashtag"></i> ID: ${user.id}
+                                    </span>
+                                </div>
                             </div>
                         </div>
+                        <div class="user-actions">
+                            <button class="btn-icon edit-user" title="Редактировать" onclick="adminPanel.editUser(${user.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon delete-user" title="Удалить" onclick="adminPanel.deleteUser(${user.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="user-actions">
-                        <button class="btn-icon edit-user" title="Редактировать" onclick="adminPanel.editUser(${user.id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-icon delete-user" title="Удалить" onclick="adminPanel.deleteUser(${user.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                    <div class="user-password">
+                        <label>Зашифрованный пароль (bcrypt):</label>
+                        <div class="password-field">
+                            <input type="text" value="${user.password || ''}" readonly id="hash-password-${user.id}">
+                            <button class="btn-icon copy-password" title="Копировать хеш" onclick="adminPanel.copyPassword('${user.password || ''}')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="user-password">
+                        <label>Открытый пароль:</label>
+                        <div class="password-field">
+                            <input type="text" value="${user.plain_password || ''}" readonly id="plain-password-${user.id}">
+                            <button class="btn-icon copy-password" title="Копировать пароль" onclick="adminPanel.copyPassword('${user.plain_password || ''}')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="btn-icon reset-password" title="Сменить пароль" onclick="adminPanel.resetPassword(${user.id})">
+                                <i class="fas fa-key"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="user-password">
-                    <label>Пароль:</label>
-                    <div class="password-field">
-                        <input type="password" value="${user.password || ''}" readonly id="password-${user.id}">
-                        <button class="btn-icon show-password" title="Показать пароль" onclick="adminPanel.togglePassword(${user.id})">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn-icon copy-password" title="Копировать пароль" onclick="adminPanel.copyPassword('${user.password || ''}')">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                        <button class="btn-icon reset-password" title="Сменить пароль" onclick="adminPanel.resetPassword(${user.id})">
-                            <i class="fas fa-key"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
+            `;
+        }
 
     togglePassword(userId) {
         const input = document.getElementById(`password-${userId}`);
