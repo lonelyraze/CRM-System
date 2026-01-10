@@ -93,7 +93,8 @@ def tickets(
 
     db_user = db.query(User).filter_by(username=user).first()
     if not db_user:
-        return RedirectResponse("/", 302)
+        request.session.clear()
+        return RedirectResponse("/", status_code=302)
 
     # Получаем тикеты в зависимости от прав - НОВЫЕ ПЕРВЫМИ
     if db_user.is_admin:
